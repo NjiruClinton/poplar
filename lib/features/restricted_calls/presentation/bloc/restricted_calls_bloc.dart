@@ -10,30 +10,23 @@ class RestrictedCallsBloc
     extends Bloc<RestrictedCallsEvent, RestrictedCallsState> {
   final RestrictedCallsRepository repository;
 
-  RestrictedCallsBloc(
-      this.repository,
-      ) : super(
-    const RestrictedCallsState.initial(),
-  ) {
+  RestrictedCallsBloc(this.repository)
+    : super(const RestrictedCallsState.initial()) {
     on<LoadRestrictedCalls>(_onLoad);
     on<AddRestrictedContact>(_onAdd);
     on<RemoveRestrictedContact>(_onRemove);
   }
 
   Future<void> _onLoad(
-      LoadRestrictedCalls event,
-      Emitter<RestrictedCallsState> emit,
-      ) async {
-    emit(
-      const RestrictedCallsState.loading(),
-    );
+    LoadRestrictedCalls event,
+    Emitter<RestrictedCallsState> emit,
+  ) async {
+    emit(const RestrictedCallsState.loading());
 
     try {
-      final contacts =
-      await repository.getRestrictedContacts();
+      final contacts = await repository.getRestrictedContacts();
 
-      final rejectedCalls =
-      await repository.getRejectedCalls();
+      final rejectedCalls = await repository.getRejectedCalls();
 
       emit(
         RestrictedCallsState.loaded(
@@ -42,37 +35,25 @@ class RestrictedCallsBloc
         ),
       );
     } catch (error) {
-      emit(
-        RestrictedCallsState.error(
-          error.toString(),
-        ),
-      );
+      emit(RestrictedCallsState.error(error.toString()));
     }
   }
 
   Future<void> _onAdd(
-      AddRestrictedContact event,
-      Emitter<RestrictedCallsState> emit,
-      ) async {
-    await repository.addRestrictedContact(
-      event.contact,
-    );
+    AddRestrictedContact event,
+    Emitter<RestrictedCallsState> emit,
+  ) async {
+    await repository.addRestrictedContact(event.contact);
 
-    add(
-      const RestrictedCallsEvent.load(),
-    );
+    add(const RestrictedCallsEvent.load());
   }
 
   Future<void> _onRemove(
-      RemoveRestrictedContact event,
-      Emitter<RestrictedCallsState> emit,
-      ) async {
-    await repository.removeRestrictedContact(
-      event.phoneNumber,
-    );
+    RemoveRestrictedContact event,
+    Emitter<RestrictedCallsState> emit,
+  ) async {
+    await repository.removeRestrictedContact(event.phoneNumber);
 
-    add(
-      const RestrictedCallsEvent.load(),
-    );
+    add(const RestrictedCallsEvent.load());
   }
 }

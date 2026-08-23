@@ -11,5 +11,6 @@ class RejectedCall with _$RejectedCall {
     required DateTime timestamp,
   }) = _RejectedCall;
 
-  factory RejectedCall.fromJson(Map<String, dynamic> json,) => _$RejectedCallFromJson(json);
+  factory RejectedCall.fromJson(Map<String, dynamic> json) =>
+      _$RejectedCallFromJson(json);
 }

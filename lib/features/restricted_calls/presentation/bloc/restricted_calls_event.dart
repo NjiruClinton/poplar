@@ -6,14 +6,11 @@ part 'restricted_calls_event.freezed.dart';
 
 @freezed
 class RestrictedCallsEvent with _$RestrictedCallsEvent {
-  const factory RestrictedCallsEvent.load() =
-  LoadRestrictedCalls;
+  const factory RestrictedCallsEvent.load() = LoadRestrictedCalls;
 
-  const factory RestrictedCallsEvent.add(
-      RestrictedContact contact,
-      ) = AddRestrictedContact;
+  const factory RestrictedCallsEvent.add(RestrictedContact contact) =
+      AddRestrictedContact;
 
-  const factory RestrictedCallsEvent.remove(
-      String phoneNumber,
-      ) = RemoveRestrictedContact;
+  const factory RestrictedCallsEvent.remove(String phoneNumber) =
+      RemoveRestrictedContact;
 }

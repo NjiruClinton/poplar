@@ -11,5 +11,6 @@ class RestrictedContact with _$RestrictedContact {
     required DateTime createdAt,
   }) = _RestrictedContact;
 
-  factory RestrictedContact.fromJson(Map<String, dynamic> json,) => _$RestrictedContactFromJson(json);
+  factory RestrictedContact.fromJson(Map<String, dynamic> json) =>
+      _$RestrictedContactFromJson(json);
 }
