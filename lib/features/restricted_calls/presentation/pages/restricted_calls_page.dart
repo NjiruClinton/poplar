@@ -1,10 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
+import '../../../../core/platform/contacts_platform.dart';
 import '../../domain/entities/restricted_contact.dart';
 import '../bloc/restricted_calls_bloc.dart';
 import '../bloc/restricted_calls_event.dart';
 import '../bloc/restricted_calls_state.dart';
+import 'contact_picker_page.dart';
 
 class RestrictedCallsPage extends StatelessWidget {
   const RestrictedCallsPage({super.key});
@@ -15,17 +17,20 @@ class RestrictedCallsPage extends StatelessWidget {
       appBar: AppBar(title: const Text('Restricted Calls')),
       floatingActionButton: FloatingActionButton(
         onPressed: () {
-          final RestrictedContact contact = RestrictedContact(
-            phoneNumber: '+254110395040',
-            name: 'Test Number',
-            createdAt: DateTime.now(),
-          );
-
-          context.read<RestrictedCallsBloc>().add(
-            RestrictedCallsEvent.add(contact),
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (_) => RepositoryProvider.value(
+                value: context.read<ContactsPlatform>(),
+                child: BlocProvider.value(
+                  value: context.read<RestrictedCallsBloc>(),
+                  child: const ContactPickerPage(),
+                ),
+              ),
+            ),
           );
         },
-        child: const Icon(Icons.add),
+        child: const Icon(Icons.person_add),
       ),
       body: BlocBuilder<RestrictedCallsBloc, RestrictedCallsState>(
         builder: (context, state) {
