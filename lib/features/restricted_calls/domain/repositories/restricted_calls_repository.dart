@@ -10,7 +10,7 @@ abstract class RestrictedCallsRepository {
 
   Future<List<RejectedCall>> getRejectedCalls();
 
-  Future<void> logRejectedCall(RejectedCall call);
+  // Future<void> logRejectedCall(RejectedCall call);
 
   Future<void> syncRestrictedNumbers();
 }

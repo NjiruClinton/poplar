@@ -17,14 +17,10 @@ class MainActivity : FlutterActivity() {
     companion object {
         private const val CALL_SCREENING_ROLE_REQUEST = 1001
         private const val CONTACTS_PERMISSION_REQUEST = 1002
-        private const val CHANNEL =
-            "com.example.poplar/call_screening"
-
-        private const val PREFS_NAME =
-            "poplar_call_screening"
-
-        private const val RESTRICTED_NUMBERS_KEY =
-            "restricted_numbers"
+        private const val CHANNEL = "com.example.poplar/call_screening"
+        private const val PREFS_NAME = "poplar_call_screening"
+        private const val RESTRICTED_NUMBERS_KEY = "restricted_numbers"
+        private const val REJECTED_CALLS_KEY = "rejected_calls"
     }
 
     override fun onCreate(
@@ -56,12 +52,56 @@ class MainActivity : FlutterActivity() {
 
                     result.success(null)
                 }
+                "getRejectedCalls" -> {
+                    val calls = getRejectedCalls()
 
+                    result.success(calls)
+                }
                 else -> {
                     result.notImplemented()
                 }
             }
         }
+    }
+
+    private fun getRejectedCalls(): List<Map<String, Any>> {
+        val preferences =
+            getSharedPreferences(
+                PREFS_NAME,
+                MODE_PRIVATE,
+            )
+
+        val json =
+            preferences.getString(
+                REJECTED_CALLS_KEY,
+                "[]",
+            ) ?: "[]"
+
+        val jsonArray = JSONArray(json)
+
+        val calls =
+            mutableListOf<Map<String, Any>>()
+
+        for (index in 0 until jsonArray.length()) {
+            val call =
+                jsonArray.getJSONObject(index)
+
+            calls.add(
+                mapOf(
+                    "phoneNumber" to call.getString(
+                        "phoneNumber",
+                    ),
+                    "timestamp" to call.getLong(
+                        "timestamp",
+                    ),
+                    "action" to call.getString(
+                        "action",
+                    ),
+                ),
+            )
+        }
+
+        return calls
     }
 
     private fun saveRestrictedNumbers(

@@ -8,14 +8,10 @@ import org.json.JSONArray
 class CallScreeningService : CallScreeningService() {
 
     companion object {
-        private const val TAG =
-            "PoplarCallScreening"
-
-        private const val PREFS_NAME =
-            "poplar_call_screening"
-
-        private const val RESTRICTED_NUMBERS_KEY =
-            "restricted_numbers"
+        private const val TAG = "PoplarCallScreening"
+        private const val PREFS_NAME = "poplar_call_screening"
+        private const val RESTRICTED_NUMBERS_KEY = "restricted_numbers"
+        private const val REJECTED_CALLS_KEY = "rejected_calls"
     }
 
     override fun onCreate() {
@@ -69,6 +65,10 @@ class CallScreeningService : CallScreeningService() {
             )
 
             rejectCall(callDetails)
+
+            logRejectedCall(
+                normalizedNumber,
+            )
 
             return
         }
@@ -169,5 +169,50 @@ class CallScreeningService : CallScreeningService() {
             CallResponse.Builder()
                 .build(),
         )
+    }
+
+    private fun logRejectedCall(
+        number: String,
+    ) {
+        val preferences =
+            getSharedPreferences(
+                PREFS_NAME,
+                MODE_PRIVATE,
+            )
+
+        val existingJson =
+            preferences.getString(
+                REJECTED_CALLS_KEY,
+                "[]",
+            ) ?: "[]"
+
+        val existingCalls =
+            JSONArray(existingJson)
+
+        val call = org.json.JSONObject()
+
+        call.put(
+            "phoneNumber",
+            number,
+        )
+
+        call.put(
+            "timestamp",
+            System.currentTimeMillis(),
+        )
+
+        call.put(
+            "action",
+            "rejected",
+        )
+
+        existingCalls.put(call)
+
+        preferences.edit()
+            .putString(
+                REJECTED_CALLS_KEY,
+                existingCalls.toString(),
+            )
+            .apply()
     }
 }

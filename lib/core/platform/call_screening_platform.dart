@@ -12,4 +12,18 @@ class CallScreeningPlatform {
       'numbers': numbers,
     });
   }
+
+  Future<List<Map<String, dynamic>>> getRejectedCalls() async {
+    final result = await _channel.invokeMethod<List<dynamic>>(
+      'getRejectedCalls',
+    );
+
+    if (result == null) {
+      return [];
+    }
+
+    return result
+        .map((item) => Map<String, dynamic>.from(item as Map))
+        .toList();
+  }
 }

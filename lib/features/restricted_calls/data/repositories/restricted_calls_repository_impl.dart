@@ -71,27 +71,29 @@ class RestrictedCallsRepositoryImpl implements RestrictedCallsRepository {
 
   @override
   Future<List<RejectedCall>> getRejectedCalls() async {
-    final values = preferences.getStringList(_rejectedCallsKey) ?? [];
+    final calls = await callScreeningPlatform.getRejectedCalls();
 
-    return values
-        .map(
-          (value) =>
-              RejectedCall.fromJson(jsonDecode(value) as Map<String, dynamic>),
-        )
-        .toList();
+    return calls.map((call) {
+      return RejectedCall(
+        phoneNumber: call['phoneNumber'] as String,
+        timestamp: DateTime.fromMillisecondsSinceEpoch(
+          call['timestamp'] as int,
+        ),
+      );
+    }).toList();
   }
 
-  @override
-  Future<void> logRejectedCall(RejectedCall call) async {
-    final calls = await getRejectedCalls();
-
-    final updatedCalls = [call, ...calls];
-
-    await preferences.setStringList(
-      _rejectedCallsKey,
-      updatedCalls.map((item) => jsonEncode(item.toJson())).toList(),
-    );
-  }
+  // @override
+  // Future<void> logRejectedCall(RejectedCall call) async {
+  //   final calls = await getRejectedCalls();
+  //
+  //   final updatedCalls = [call, ...calls];
+  //
+  //   await preferences.setStringList(
+  //     _rejectedCallsKey,
+  //     updatedCalls.map((item) => jsonEncode(item.toJson())).toList(),
+  //   );
+  // }
 
   Future<void> syncRestrictedNumbers() async {
     final contacts = await getRestrictedContacts();
