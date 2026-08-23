@@ -26,6 +26,8 @@ class RestrictedCallsBloc
     try {
       final contacts = await repository.getRestrictedContacts();
 
+      await repository.syncRestrictedNumbers();
+
       final rejectedCalls = await repository.getRejectedCalls();
 
       emit(

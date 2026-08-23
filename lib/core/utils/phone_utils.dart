@@ -2,10 +2,7 @@ class PhoneUtils {
   static String normalizeKenyanNumber(String number) {
     String value = number.trim();
 
-    value = value.replaceAll(
-      RegExp(r'[\s\-\(\)]'),
-      '',
-    );
+    value = value.replaceAll(RegExp(r'[\s\-\(\)]'), '');
 
     if (value.startsWith('+254')) {
       return value;

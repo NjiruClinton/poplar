@@ -3,11 +3,19 @@ package com.example.poplar
 import android.telecom.Call
 import android.telecom.CallScreeningService
 import android.util.Log
+import org.json.JSONArray
 
 class CallScreeningService : CallScreeningService() {
 
     companion object {
-        private const val TAG = "PoplarCallScreening"
+        private const val TAG =
+            "PoplarCallScreening"
+
+        private const val PREFS_NAME =
+            "poplar_call_screening"
+
+        private const val RESTRICTED_NUMBERS_KEY =
+            "restricted_numbers"
     }
 
     override fun onCreate() {
@@ -15,40 +23,49 @@ class CallScreeningService : CallScreeningService() {
 
         Log.e(
             TAG,
-            "CallScreeningService CREATED"
+            "CallScreeningService CREATED",
         )
     }
 
     override fun onScreenCall(
-        callDetails: Call.Details
+        callDetails: Call.Details,
     ) {
         Log.e(
             TAG,
-            "onScreenCall() INVOKED"
+            "onScreenCall() INVOKED",
         )
 
-        val number = callDetails.handle
-            ?.schemeSpecificPart
-            ?: run {
-                Log.e(
-                    TAG,
-                    "No phone number available"
-                )
+        val number =
+            callDetails.handle
+                ?.schemeSpecificPart
+                ?: run {
+                    Log.e(
+                        TAG,
+                        "No phone number available",
+                    )
 
-                allowCall(callDetails)
+                    allowCall(callDetails)
 
-                return
-            }
+                    return
+                }
 
         Log.e(
             TAG,
-            "Incoming call from: $number"
+            "Incoming call from: $number",
         )
 
-        if (isRestrictedNumber(number)) {
+        val normalizedNumber =
+            normalizeKenyanNumber(number)
+
+        Log.e(
+            TAG,
+            "Normalized number: $normalizedNumber",
+        )
+
+        if (isRestrictedNumber(normalizedNumber)) {
             Log.e(
                 TAG,
-                "NUMBER IS RESTRICTED - REJECTING"
+                "NUMBER IS RESTRICTED - REJECTING",
             )
 
             rejectCall(callDetails)
@@ -58,22 +75,48 @@ class CallScreeningService : CallScreeningService() {
 
         Log.e(
             TAG,
-            "NUMBER IS NOT RESTRICTED - ALLOWING"
+            "NUMBER IS NOT RESTRICTED - ALLOWING",
         )
 
         allowCall(callDetails)
     }
 
     private fun isRestrictedNumber(
-        number: String
+        number: String,
     ): Boolean {
-        val normalizedNumber = normalizeKenyanNumber(number)
+        val preferences =
+            getSharedPreferences(
+                PREFS_NAME,
+                MODE_PRIVATE,
+            )
 
-        return normalizedNumber == "+254110395040"
+        val json =
+            preferences.getString(
+                RESTRICTED_NUMBERS_KEY,
+                "[]",
+            ) ?: "[]"
+
+        val numbers =
+            JSONArray(json)
+
+        for (index in 0 until numbers.length()) {
+            val restrictedNumber =
+                numbers.getString(index)
+
+            if (
+                normalizeKenyanNumber(
+                    restrictedNumber,
+                ) == number
+            ) {
+                return true
+            }
+        }
+
+        return false
     }
 
     private fun normalizeKenyanNumber(
-        number: String
+        number: String,
     ): String {
         val value = number
             .trim()
@@ -102,7 +145,7 @@ class CallScreeningService : CallScreeningService() {
     }
 
     private fun rejectCall(
-        callDetails: Call.Details
+        callDetails: Call.Details,
     ) {
         val response =
             CallResponse.Builder()
@@ -114,17 +157,17 @@ class CallScreeningService : CallScreeningService() {
 
         respondToCall(
             callDetails,
-            response
+            response,
         )
     }
 
     private fun allowCall(
-        callDetails: Call.Details
+        callDetails: Call.Details,
     ) {
         respondToCall(
             callDetails,
             CallResponse.Builder()
-                .build()
+                .build(),
         )
     }
 }

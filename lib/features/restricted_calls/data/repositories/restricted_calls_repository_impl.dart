@@ -6,6 +6,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../../domain/entities/rejected_call.dart';
 import '../../domain/entities/restricted_contact.dart';
 import '../../domain/repositories/restricted_calls_repository.dart';
+import '../../../../core/platform/call_screening_platform.dart';
 
 @LazySingleton(as: RestrictedCallsRepository)
 class RestrictedCallsRepositoryImpl implements RestrictedCallsRepository {
@@ -14,8 +15,9 @@ class RestrictedCallsRepositoryImpl implements RestrictedCallsRepository {
   static const String _rejectedCallsKey = 'rejected_calls';
 
   final SharedPreferences preferences;
+  final CallScreeningPlatform callScreeningPlatform;
 
-  RestrictedCallsRepositoryImpl(this.preferences);
+  RestrictedCallsRepositoryImpl(this.preferences, this.callScreeningPlatform);
 
   @override
   Future<List<RestrictedContact>> getRestrictedContacts() async {
@@ -43,6 +45,10 @@ class RestrictedCallsRepositoryImpl implements RestrictedCallsRepository {
       _restrictedContactsKey,
       updatedContacts.map((item) => jsonEncode(item.toJson())).toList(),
     );
+
+    await callScreeningPlatform.setRestrictedNumbers(
+      updatedContacts.map((item) => item.phoneNumber).toList(),
+    );
   }
 
   @override
@@ -56,6 +62,10 @@ class RestrictedCallsRepositoryImpl implements RestrictedCallsRepository {
     await preferences.setStringList(
       _restrictedContactsKey,
       updatedContacts.map((item) => jsonEncode(item.toJson())).toList(),
+    );
+
+    await callScreeningPlatform.setRestrictedNumbers(
+      updatedContacts.map((item) => item.phoneNumber).toList(),
     );
   }
 
@@ -80,6 +90,14 @@ class RestrictedCallsRepositoryImpl implements RestrictedCallsRepository {
     await preferences.setStringList(
       _rejectedCallsKey,
       updatedCalls.map((item) => jsonEncode(item.toJson())).toList(),
+    );
+  }
+
+  Future<void> syncRestrictedNumbers() async {
+    final contacts = await getRestrictedContacts();
+
+    await callScreeningPlatform.setRestrictedNumbers(
+      contacts.map((item) => item.phoneNumber).toList(),
     );
   }
 }
