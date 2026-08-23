@@ -3,6 +3,8 @@ package com.example.poplar
 import android.telecom.Call
 import android.telecom.CallScreeningService
 import android.util.Log
+import android.net.Uri
+import android.provider.ContactsContract
 import org.json.JSONArray
 
 class CallScreeningService : CallScreeningService() {
@@ -12,6 +14,8 @@ class CallScreeningService : CallScreeningService() {
         private const val PREFS_NAME = "poplar_call_screening"
         private const val RESTRICTED_NUMBERS_KEY = "restricted_numbers"
         private const val REJECTED_CALLS_KEY = "rejected_calls"
+        private const val BLOCK_UNKNOWN_KEY = "block_unknown_callers"
+        private const val MAX_LOG_ENTRIES = 500
     }
 
     override fun onCreate() {
@@ -58,7 +62,7 @@ class CallScreeningService : CallScreeningService() {
             "Normalized number: $normalizedNumber",
         )
 
-        if (isRestrictedNumber(normalizedNumber)) {
+        if (isRestrictedNumber(normalizedNumber) || shouldBlockUnknown(number)) {
             Log.e(
                 TAG,
                 "NUMBER IS RESTRICTED - REJECTING",
@@ -81,6 +85,29 @@ class CallScreeningService : CallScreeningService() {
         allowCall(callDetails)
     }
 
+    private fun shouldBlockUnknown(number: String): Boolean {
+        val enabled = getSharedPreferences(PREFS_NAME, MODE_PRIVATE)
+            .getBoolean(BLOCK_UNKNOWN_KEY, false)
+        if (!enabled) return false
+
+        val lookupUri = Uri.withAppendedPath(
+            ContactsContract.PhoneLookup.CONTENT_FILTER_URI,
+            Uri.encode(number),
+        )
+        return try {
+            contentResolver.query(
+                lookupUri,
+                arrayOf(ContactsContract.PhoneLookup._ID),
+                null,
+                null,
+                null,
+            )?.use { cursor -> !cursor.moveToFirst() } ?: true
+        } catch (error: SecurityException) {
+            Log.w(TAG, "Cannot check contacts; allowing call", error)
+            false
+        }
+    }
+
     private fun isRestrictedNumber(
         number: String,
     ): Boolean {
@@ -90,29 +117,16 @@ class CallScreeningService : CallScreeningService() {
                 MODE_PRIVATE,
             )
 
-        val json =
-            preferences.getString(
-                RESTRICTED_NUMBERS_KEY,
-                "[]",
-            ) ?: "[]"
-
-        val numbers =
-            JSONArray(json)
-
-        for (index in 0 until numbers.length()) {
-            val restrictedNumber =
-                numbers.getString(index)
-
-            if (
-                normalizeKenyanNumber(
-                    restrictedNumber,
-                ) == number
-            ) {
-                return true
+        return try {
+            preferences.getStringSet(RESTRICTED_NUMBERS_KEY, emptySet())
+                ?.contains(number) == true
+        } catch (_: ClassCastException) {
+            // Supports data written by versions that stored this value as JSON.
+            val legacy = JSONArray(preferences.getString(RESTRICTED_NUMBERS_KEY, "[]"))
+            (0 until legacy.length()).any {
+                normalizeKenyanNumber(legacy.getString(it)) == number
             }
         }
-
-        return false
     }
 
     private fun normalizeKenyanNumber(
@@ -206,12 +220,17 @@ class CallScreeningService : CallScreeningService() {
             "rejected",
         )
 
-        existingCalls.put(call)
+        val cappedCalls = JSONArray()
+        val start = maxOf(0, existingCalls.length() - MAX_LOG_ENTRIES + 1)
+        for (index in start until existingCalls.length()) {
+            cappedCalls.put(existingCalls.get(index))
+        }
+        cappedCalls.put(call)
 
         preferences.edit()
             .putString(
                 REJECTED_CALLS_KEY,
-                existingCalls.toString(),
+                cappedCalls.toString(),
             )
             .apply()
     }

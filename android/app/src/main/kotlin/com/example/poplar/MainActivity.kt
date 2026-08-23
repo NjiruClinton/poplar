@@ -21,6 +21,7 @@ class MainActivity : FlutterActivity() {
         private const val PREFS_NAME = "poplar_call_screening"
         private const val RESTRICTED_NUMBERS_KEY = "restricted_numbers"
         private const val REJECTED_CALLS_KEY = "rejected_calls"
+        private const val BLOCK_UNKNOWN_KEY = "block_unknown_callers"
     }
 
     override fun onCreate(
@@ -56,6 +57,19 @@ class MainActivity : FlutterActivity() {
                     val calls = getRejectedCalls()
 
                     result.success(calls)
+                }
+                "setBlockingPolicy" -> {
+                    val enabled = call.argument<Boolean>("blockUnknownCallers") ?: false
+                    getSharedPreferences(PREFS_NAME, MODE_PRIVATE).edit()
+                        .putBoolean(BLOCK_UNKNOWN_KEY, enabled)
+                        .apply()
+                    result.success(null)
+                }
+                "clearRejectedCalls" -> {
+                    getSharedPreferences(PREFS_NAME, MODE_PRIVATE).edit()
+                        .remove(REJECTED_CALLS_KEY)
+                        .apply()
+                    result.success(null)
                 }
                 else -> {
                     result.notImplemented()
@@ -113,16 +127,11 @@ class MainActivity : FlutterActivity() {
                 MODE_PRIVATE,
             )
 
-        val jsonArray = JSONArray()
-
-        numbers.forEach { number ->
-            jsonArray.put(number)
-        }
-
         preferences.edit()
-            .putString(
+            .remove(RESTRICTED_NUMBERS_KEY)
+            .putStringSet(
                 RESTRICTED_NUMBERS_KEY,
-                jsonArray.toString(),
+                numbers.toSet(),
             )
             .apply()
     }

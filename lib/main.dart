@@ -3,6 +3,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 
 import 'core/di/injection.dart';
 import 'core/platform/contacts_platform.dart';
+import 'core/theme/app_theme.dart';
 import 'features/restricted_calls/presentation/bloc/restricted_calls_bloc.dart';
 import 'features/restricted_calls/presentation/bloc/restricted_calls_event.dart';
 import 'features/restricted_calls/presentation/pages/restricted_calls_page.dart';
@@ -21,10 +22,9 @@ class VoicemailApp extends StatelessWidget {
     return MaterialApp(
       debugShowCheckedModeBanner: false,
       title: 'Poplar',
-      theme: ThemeData(
-        colorScheme: ColorScheme.fromSeed(seedColor: Colors.blue),
-        useMaterial3: true,
-      ),
+      themeMode: ThemeMode.system,
+      theme: AppTheme.light(),
+      darkTheme: AppTheme.dark(),
       home: MultiRepositoryProvider(
         providers: [
           RepositoryProvider<ContactsPlatform>(

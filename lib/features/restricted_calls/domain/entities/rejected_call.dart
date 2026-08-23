@@ -1,16 +1,22 @@
-import 'package:freezed_annotation/freezed_annotation.dart';
+class RejectedCall {
+  const RejectedCall({
+    required this.phoneNumber,
+    this.contactName,
+    required this.timestamp,
+  });
+  final String phoneNumber;
+  final String? contactName;
+  final DateTime timestamp;
 
-part 'rejected_call.freezed.dart';
-part 'rejected_call.g.dart';
+  factory RejectedCall.fromJson(Map<String, dynamic> json) => RejectedCall(
+    phoneNumber: json['phoneNumber'] as String,
+    contactName: json['contactName'] as String?,
+    timestamp: DateTime.parse(json['timestamp'] as String),
+  );
 
-@freezed
-abstract class RejectedCall with _$RejectedCall {
-  const factory RejectedCall({
-    required String phoneNumber,
-    String? contactName,
-    required DateTime timestamp,
-  }) = _RejectedCall;
-
-  factory RejectedCall.fromJson(Map<String, dynamic> json) =>
-      _$RejectedCallFromJson(json);
+  Map<String, dynamic> toJson() => {
+    'phoneNumber': phoneNumber,
+    'contactName': contactName,
+    'timestamp': timestamp.toIso8601String(),
+  };
 }

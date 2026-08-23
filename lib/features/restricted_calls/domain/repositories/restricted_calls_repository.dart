@@ -6,11 +6,17 @@ abstract class RestrictedCallsRepository {
 
   Future<void> addRestrictedContact(RestrictedContact contact);
 
+  Future<void> addRestrictedContacts(List<RestrictedContact> contacts);
+
   Future<void> removeRestrictedContact(String phoneNumber);
 
   Future<List<RejectedCall>> getRejectedCalls();
 
-  // Future<void> logRejectedCall(RejectedCall call);
+  Future<void> clearRejectedCalls();
+
+  Future<bool> getBlockUnknownCallers();
+
+  Future<void> setBlockUnknownCallers(bool enabled);
 
   Future<void> syncRestrictedNumbers();
 }

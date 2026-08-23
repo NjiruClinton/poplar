@@ -13,6 +13,12 @@ class CallScreeningPlatform {
     });
   }
 
+  Future<void> setBlockingPolicy({required bool blockUnknownCallers}) async {
+    await _channel.invokeMethod<void>('setBlockingPolicy', <String, dynamic>{
+      'blockUnknownCallers': blockUnknownCallers,
+    });
+  }
+
   Future<List<Map<String, dynamic>>> getRejectedCalls() async {
     final result = await _channel.invokeMethod<List<dynamic>>(
       'getRejectedCalls',
@@ -26,4 +32,7 @@ class CallScreeningPlatform {
         .map((item) => Map<String, dynamic>.from(item as Map))
         .toList();
   }
+
+  Future<void> clearRejectedCalls() =>
+      _channel.invokeMethod<void>('clearRejectedCalls');
 }

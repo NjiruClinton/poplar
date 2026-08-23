@@ -14,7 +14,10 @@ class RestrictedCallsBloc
     : super(const RestrictedCallsState.initial()) {
     on<LoadRestrictedCalls>(_onLoad);
     on<AddRestrictedContact>(_onAdd);
+    on<AddManyRestrictedContacts>(_onAddMany);
     on<RemoveRestrictedContact>(_onRemove);
+    on<SetBlockUnknownCallers>(_onSetBlockUnknown);
+    on<ClearRejectedCallLogs>(_onClearLogs);
   }
 
   Future<void> _onLoad(
@@ -29,16 +32,26 @@ class RestrictedCallsBloc
       await repository.syncRestrictedNumbers();
 
       final rejectedCalls = await repository.getRejectedCalls();
+      final blockUnknownCallers = await repository.getBlockUnknownCallers();
 
       emit(
         RestrictedCallsState.loaded(
           contacts: contacts,
           rejectedCalls: rejectedCalls,
+          blockUnknownCallers: blockUnknownCallers,
         ),
       );
     } catch (error) {
       emit(RestrictedCallsState.error(error.toString()));
     }
+  }
+
+  Future<void> _onAddMany(
+    AddManyRestrictedContacts event,
+    Emitter<RestrictedCallsState> emit,
+  ) async {
+    await repository.addRestrictedContacts(event.contacts);
+    add(const RestrictedCallsEvent.load());
   }
 
   Future<void> _onAdd(
@@ -56,6 +69,22 @@ class RestrictedCallsBloc
   ) async {
     await repository.removeRestrictedContact(event.phoneNumber);
 
+    add(const RestrictedCallsEvent.load());
+  }
+
+  Future<void> _onSetBlockUnknown(
+    SetBlockUnknownCallers event,
+    Emitter<RestrictedCallsState> emit,
+  ) async {
+    await repository.setBlockUnknownCallers(event.enabled);
+    add(const RestrictedCallsEvent.load());
+  }
+
+  Future<void> _onClearLogs(
+    ClearRejectedCallLogs event,
+    Emitter<RestrictedCallsState> emit,
+  ) async {
+    await repository.clearRejectedCalls();
     add(const RestrictedCallsEvent.load());
   }
 }
