@@ -14,6 +14,5 @@ Future<void> configureDependencies() async {
 @module
 abstract class RegisterModule {
   @preResolve
-  Future<SharedPreferences> get preferences =>
-      SharedPreferences.getInstance();
+  Future<SharedPreferences> get preferences => SharedPreferences.getInstance();
 }
