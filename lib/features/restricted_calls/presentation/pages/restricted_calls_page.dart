@@ -16,7 +16,7 @@ class RestrictedCallsPage extends StatelessWidget {
       floatingActionButton: FloatingActionButton(
         onPressed: () {
           final RestrictedContact contact = RestrictedContact(
-            phoneNumber: '+254712345678',
+            phoneNumber: '+254110395040',
             name: 'Test Number',
             createdAt: DateTime.now(),
           );
