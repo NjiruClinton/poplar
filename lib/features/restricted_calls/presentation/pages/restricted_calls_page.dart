@@ -67,7 +67,15 @@ class _RestrictedCallsPageState extends State<RestrictedCallsPage> {
         initial: () => const SizedBox.shrink(),
         loading: () => const Center(child: CircularProgressIndicator()),
         error: (message) => _ErrorView(message: message),
-        loaded: (contacts, rejectedCalls, blockUnknownCallers, isUpdating) =>
+        loaded: (
+          contacts,
+          rejectedCalls,
+          blockUnknownCallers,
+          isUpdating,
+          rejectAllCalls,
+          allowOnlySelected,
+          allowedContacts,
+        ) =>
             RefreshIndicator(
               onRefresh: () async {
                 context.read<RestrictedCallsBloc>().add(
@@ -84,10 +92,23 @@ class _RestrictedCallsPageState extends State<RestrictedCallsPage> {
                     contacts: contacts,
                     calls: rejectedCalls,
                     blockUnknown: blockUnknownCallers,
+                    rejectAll: rejectAllCalls,
+                    allowOnlySelected: allowOnlySelected,
+                    allowedContacts: allowedContacts,
                     onToggleUnknown: (enabled) => context
                         .read<RestrictedCallsBloc>()
                         .add(RestrictedCallsEvent.setBlockUnknown(enabled)),
                     onManage: () => setState(() => _index = 1),
+                    onToggleRejectAll: (enabled) => context
+                        .read<RestrictedCallsBloc>()
+                        .add(RestrictedCallsEvent.setRejectAll(enabled)),
+                    onToggleAllowOnly: (enabled) => context
+                        .read<RestrictedCallsBloc>()
+                        .add(
+                          RestrictedCallsEvent.setAllowOnlySelected(enabled),
+                        ),
+                    onManageAllowed: () =>
+                        _showAllowedCallers(allowedContacts),
                   ),
                   _BlockedList(contacts: contacts, onAdd: _showAddOptions),
                   _ActivityList(calls: rejectedCalls),
@@ -143,14 +164,16 @@ class _RestrictedCallsPageState extends State<RestrictedCallsPage> {
     );
   }
 
-  void _openContacts() => Navigator.push(
+  void _openContacts({
+    ContactPickerPurpose purpose = ContactPickerPurpose.block,
+  }) => Navigator.push(
     context,
     MaterialPageRoute(
       builder: (_) => RepositoryProvider.value(
         value: context.read<ContactsPlatform>(),
         child: BlocProvider.value(
           value: context.read<RestrictedCallsBloc>(),
-          child: const ContactPickerPage(),
+          child: ContactPickerPage(purpose: purpose),
         ),
       ),
     ),
@@ -192,6 +215,137 @@ class _RestrictedCallsPageState extends State<RestrictedCallsPage> {
       ),
     );
   }
+
+  Future<void> _showAllowedCallers(
+    List<RestrictedContact> allowedContacts,
+  ) async {
+    await showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      showDragHandle: true,
+      builder: (sheetContext) => SafeArea(
+        child: SizedBox(
+          height: MediaQuery.sizeOf(sheetContext).height * .72,
+          child: Column(
+            children: [
+              ListTile(
+                title: const Text(
+                  'Allowed callers',
+                  style: TextStyle(fontWeight: FontWeight.bold),
+                ),
+                subtitle: Text('${allowedContacts.length} selected'),
+              ),
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 16),
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: FilledButton.tonalIcon(
+                        onPressed: () {
+                          Navigator.pop(sheetContext);
+                          _openContacts(purpose: ContactPickerPurpose.allow);
+                        },
+                        icon: const Icon(Icons.contacts_outlined),
+                        label: const Text('Contacts'),
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: FilledButton.tonalIcon(
+                        onPressed: () {
+                          Navigator.pop(sheetContext);
+                          _showAllowedNumber();
+                        },
+                        icon: const Icon(Icons.dialpad_outlined),
+                        label: const Text('Number'),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 8),
+              Expanded(
+                child: allowedContacts.isEmpty
+                    ? const Center(
+                        child: Padding(
+                          padding: EdgeInsets.all(32),
+                          child: Text(
+                            'No allowed callers yet. Add at least one before enabling this mode.',
+                            textAlign: TextAlign.center,
+                          ),
+                        ),
+                      )
+                    : ListView.builder(
+                        itemCount: allowedContacts.length,
+                        itemBuilder: (context, index) {
+                          final contact = allowedContacts[index];
+                          return ListTile(
+                            leading: const CircleAvatar(
+                              child: Icon(Icons.check),
+                            ),
+                            title: Text(contact.name ?? 'Allowed number'),
+                            subtitle: Text(contact.phoneNumber),
+                            trailing: IconButton(
+                              tooltip: 'Remove',
+                              icon: const Icon(Icons.remove_circle_outline),
+                              onPressed: () {
+                                this.context.read<RestrictedCallsBloc>().add(
+                                  RestrictedCallsEvent.removeAllowed(
+                                    contact.phoneNumber,
+                                  ),
+                                );
+                                Navigator.pop(sheetContext);
+                              },
+                            ),
+                          );
+                        },
+                      ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Future<void> _showAllowedNumber() async {
+    final controller = TextEditingController();
+    final number = await showDialog<String>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Allow a number'),
+        content: TextField(
+          controller: controller,
+          autofocus: true,
+          keyboardType: TextInputType.phone,
+          decoration: const InputDecoration(
+            labelText: 'Phone number',
+            hintText: 'e.g. 0712 345 678',
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Cancel'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(context, controller.text),
+            child: const Text('Allow'),
+          ),
+        ],
+      ),
+    );
+    controller.dispose();
+    if (number == null || number.trim().isEmpty || !mounted) return;
+    context.read<RestrictedCallsBloc>().add(
+      RestrictedCallsEvent.addAllowed([
+        RestrictedContact(
+          phoneNumber: PhoneUtils.normalizeKenyanNumber(number),
+          createdAt: DateTime.now(),
+        ),
+      ]),
+    );
+  }
 }
 
 class _Overview extends StatelessWidget {
@@ -201,12 +355,24 @@ class _Overview extends StatelessWidget {
     required this.blockUnknown,
     required this.onToggleUnknown,
     required this.onManage,
+    required this.rejectAll,
+    required this.allowOnlySelected,
+    required this.allowedContacts,
+    required this.onToggleRejectAll,
+    required this.onToggleAllowOnly,
+    required this.onManageAllowed,
   });
   final List<RestrictedContact> contacts;
   final List<RejectedCall> calls;
   final bool blockUnknown;
   final ValueChanged<bool> onToggleUnknown;
   final VoidCallback onManage;
+  final bool rejectAll;
+  final bool allowOnlySelected;
+  final List<RestrictedContact> allowedContacts;
+  final ValueChanged<bool> onToggleRejectAll;
+  final ValueChanged<bool> onToggleAllowOnly;
+  final VoidCallback onManageAllowed;
 
   @override
   Widget build(BuildContext context) {
@@ -279,6 +445,49 @@ class _Overview extends StatelessWidget {
           ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
         ),
         const SizedBox(height: 10),
+        Card(
+          child: SwitchListTile(
+            value: rejectAll,
+            onChanged: onToggleRejectAll,
+            secondary: const Icon(Icons.phone_disabled_outlined),
+            title: const Text('Reject every call'),
+            subtitle: const Text(
+              'Stop all incoming calls, including saved contacts.',
+            ),
+          ),
+        ),
+        const SizedBox(height: 12),
+        Card(
+          child: Column(
+            children: [
+              SwitchListTile(
+                value: allowOnlySelected,
+                onChanged: (enabled) {
+                  if (enabled && allowedContacts.isEmpty) {
+                    onManageAllowed();
+                    return;
+                  }
+                  onToggleAllowOnly(enabled);
+                },
+                secondary: const Icon(Icons.verified_user_outlined),
+                title: const Text('Accept calls only from'),
+                subtitle: Text(
+                  allowedContacts.isEmpty
+                      ? 'Choose contacts or enter phone numbers first.'
+                      : '${allowedContacts.length} allowed caller${allowedContacts.length == 1 ? '' : 's'}',
+                ),
+              ),
+              const Divider(height: 1, indent: 56),
+              ListTile(
+                leading: const SizedBox(width: 24),
+                title: const Text('Manage allowed callers'),
+                trailing: const Icon(Icons.chevron_right),
+                onTap: onManageAllowed,
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(height: 12),
         Card(
           child: SwitchListTile(
             value: blockUnknown,

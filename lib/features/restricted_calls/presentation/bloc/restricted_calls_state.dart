@@ -10,11 +10,17 @@ sealed class RestrictedCallsState {
     List<RejectedCall> rejectedCalls = const [],
     bool blockUnknownCallers = false,
     bool isUpdating = false,
+    bool rejectAllCalls = false,
+    bool allowOnlySelected = false,
+    List<RestrictedContact> allowedContacts = const [],
   }) => RestrictedCallsLoaded(
     contacts: contacts,
     rejectedCalls: rejectedCalls,
     blockUnknownCallers: blockUnknownCallers,
     isUpdating: isUpdating,
+    rejectAllCalls: rejectAllCalls,
+    allowOnlySelected: allowOnlySelected,
+    allowedContacts: allowedContacts,
   );
   const factory RestrictedCallsState.error(String message) =
       RestrictedCallsError;
@@ -22,8 +28,15 @@ sealed class RestrictedCallsState {
   T when<T>({
     required T Function() initial,
     required T Function() loading,
-    required T Function(List<RestrictedContact>, List<RejectedCall>, bool, bool)
-    loaded,
+    required T Function(
+      List<RestrictedContact>,
+      List<RejectedCall>,
+      bool,
+      bool,
+      bool,
+      bool,
+      List<RestrictedContact>,
+    ) loaded,
     required T Function(String) error,
   }) => switch (this) {
     RestrictedCallsInitial() => initial(),
@@ -33,8 +46,19 @@ sealed class RestrictedCallsState {
       :final rejectedCalls,
       :final blockUnknownCallers,
       :final isUpdating,
+      :final rejectAllCalls,
+      :final allowOnlySelected,
+      :final allowedContacts,
     ) =>
-      loaded(contacts, rejectedCalls, blockUnknownCallers, isUpdating),
+      loaded(
+        contacts,
+        rejectedCalls,
+        blockUnknownCallers,
+        isUpdating,
+        rejectAllCalls,
+        allowOnlySelected,
+        allowedContacts,
+      ),
     RestrictedCallsError(:final message) => error(message),
   };
 }
@@ -53,11 +77,17 @@ final class RestrictedCallsLoaded extends RestrictedCallsState {
     this.rejectedCalls = const [],
     this.blockUnknownCallers = false,
     this.isUpdating = false,
+    this.rejectAllCalls = false,
+    this.allowOnlySelected = false,
+    this.allowedContacts = const [],
   });
   final List<RestrictedContact> contacts;
   final List<RejectedCall> rejectedCalls;
   final bool blockUnknownCallers;
   final bool isUpdating;
+  final bool rejectAllCalls;
+  final bool allowOnlySelected;
+  final List<RestrictedContact> allowedContacts;
 }
 
 final class RestrictedCallsError extends RestrictedCallsState {

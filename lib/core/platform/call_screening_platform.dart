@@ -13,9 +13,17 @@ class CallScreeningPlatform {
     });
   }
 
-  Future<void> setBlockingPolicy({required bool blockUnknownCallers}) async {
+  Future<void> setBlockingPolicy({
+    required bool blockUnknownCallers,
+    required bool rejectAllCalls,
+    required bool allowOnlySelected,
+    required List<String> allowedNumbers,
+  }) async {
     await _channel.invokeMethod<void>('setBlockingPolicy', <String, dynamic>{
       'blockUnknownCallers': blockUnknownCallers,
+      'rejectAllCalls': rejectAllCalls,
+      'allowOnlySelected': allowOnlySelected,
+      'allowedNumbers': allowedNumbers,
     });
   }
 

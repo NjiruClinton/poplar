@@ -18,5 +18,19 @@ abstract class RestrictedCallsRepository {
 
   Future<void> setBlockUnknownCallers(bool enabled);
 
+  Future<bool> getRejectAllCalls();
+
+  Future<void> setRejectAllCalls(bool enabled);
+
+  Future<bool> getAllowOnlySelected();
+
+  Future<void> setAllowOnlySelected(bool enabled);
+
+  Future<List<RestrictedContact>> getAllowedContacts();
+
+  Future<void> addAllowedContacts(List<RestrictedContact> contacts);
+
+  Future<void> removeAllowedContact(String phoneNumber);
+
   Future<void> syncRestrictedNumbers();
 }

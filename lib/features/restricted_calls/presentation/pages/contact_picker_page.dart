@@ -10,8 +10,14 @@ import '../../domain/entities/restricted_contact.dart';
 import '../bloc/restricted_calls_bloc.dart';
 import '../bloc/restricted_calls_event.dart';
 
+enum ContactPickerPurpose { block, allow }
+
 class ContactPickerPage extends StatefulWidget {
-  const ContactPickerPage({super.key});
+  const ContactPickerPage({
+    super.key,
+    this.purpose = ContactPickerPurpose.block,
+  });
+  final ContactPickerPurpose purpose;
   @override
   State<ContactPickerPage> createState() => _ContactPickerPageState();
 }
@@ -100,7 +106,11 @@ class _ContactPickerPageState extends State<ContactPickerPage> {
             children: [
               ListTile(
                 title: Text(contact.displayName ?? 'Choose a number'),
-                subtitle: const Text('Which number should be blocked?'),
+                subtitle: Text(
+                  widget.purpose == ContactPickerPurpose.block
+                      ? 'Which number should be blocked?'
+                      : 'Which number should be allowed?',
+                ),
               ),
               for (final phone in phones)
                 ListTile(
@@ -130,7 +140,13 @@ class _ContactPickerPageState extends State<ContactPickerPage> {
 
   void _save() {
     context.read<RestrictedCallsBloc>().add(
-      RestrictedCallsEvent.addMany(_selected.values.toList(growable: false)),
+      widget.purpose == ContactPickerPurpose.block
+          ? RestrictedCallsEvent.addMany(
+              _selected.values.toList(growable: false),
+            )
+          : RestrictedCallsEvent.addAllowed(
+              _selected.values.toList(growable: false),
+            ),
     );
     Navigator.pop(context);
   }

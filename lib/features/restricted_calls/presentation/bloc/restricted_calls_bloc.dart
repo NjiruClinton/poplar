@@ -18,6 +18,10 @@ class RestrictedCallsBloc
     on<RemoveRestrictedContact>(_onRemove);
     on<SetBlockUnknownCallers>(_onSetBlockUnknown);
     on<ClearRejectedCallLogs>(_onClearLogs);
+    on<SetRejectAllCalls>(_onSetRejectAll);
+    on<SetAllowOnlySelected>(_onSetAllowOnlySelected);
+    on<AddAllowedContacts>(_onAddAllowed);
+    on<RemoveAllowedContact>(_onRemoveAllowed);
   }
 
   Future<void> _onLoad(
@@ -33,12 +37,18 @@ class RestrictedCallsBloc
 
       final rejectedCalls = await repository.getRejectedCalls();
       final blockUnknownCallers = await repository.getBlockUnknownCallers();
+      final rejectAllCalls = await repository.getRejectAllCalls();
+      final allowOnlySelected = await repository.getAllowOnlySelected();
+      final allowedContacts = await repository.getAllowedContacts();
 
       emit(
         RestrictedCallsState.loaded(
           contacts: contacts,
           rejectedCalls: rejectedCalls,
           blockUnknownCallers: blockUnknownCallers,
+          rejectAllCalls: rejectAllCalls,
+          allowOnlySelected: allowOnlySelected,
+          allowedContacts: allowedContacts,
         ),
       );
     } catch (error) {
@@ -85,6 +95,38 @@ class RestrictedCallsBloc
     Emitter<RestrictedCallsState> emit,
   ) async {
     await repository.clearRejectedCalls();
+    add(const RestrictedCallsEvent.load());
+  }
+
+  Future<void> _onSetRejectAll(
+    SetRejectAllCalls event,
+    Emitter<RestrictedCallsState> emit,
+  ) async {
+    await repository.setRejectAllCalls(event.enabled);
+    add(const RestrictedCallsEvent.load());
+  }
+
+  Future<void> _onSetAllowOnlySelected(
+    SetAllowOnlySelected event,
+    Emitter<RestrictedCallsState> emit,
+  ) async {
+    await repository.setAllowOnlySelected(event.enabled);
+    add(const RestrictedCallsEvent.load());
+  }
+
+  Future<void> _onAddAllowed(
+    AddAllowedContacts event,
+    Emitter<RestrictedCallsState> emit,
+  ) async {
+    await repository.addAllowedContacts(event.contacts);
+    add(const RestrictedCallsEvent.load());
+  }
+
+  Future<void> _onRemoveAllowed(
+    RemoveAllowedContact event,
+    Emitter<RestrictedCallsState> emit,
+  ) async {
+    await repository.removeAllowedContact(event.phoneNumber);
     add(const RestrictedCallsEvent.load());
   }
 }

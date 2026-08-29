@@ -13,6 +13,9 @@ class RestrictedCallsRepositoryImpl implements RestrictedCallsRepository {
   static const String _restrictedContactsKey = 'restricted_contacts';
 
   static const String _blockUnknownCallersKey = 'block_unknown_callers';
+  static const String _rejectAllCallsKey = 'reject_all_calls';
+  static const String _allowOnlySelectedKey = 'allow_only_selected';
+  static const String _allowedContactsKey = 'allowed_contacts';
 
   final SharedPreferences preferences;
   final CallScreeningPlatform callScreeningPlatform;
@@ -21,7 +24,11 @@ class RestrictedCallsRepositoryImpl implements RestrictedCallsRepository {
 
   @override
   Future<List<RestrictedContact>> getRestrictedContacts() async {
-    final values = preferences.getStringList(_restrictedContactsKey) ?? [];
+    return _getContacts(_restrictedContactsKey);
+  }
+
+  Future<List<RestrictedContact>> _getContacts(String key) async {
+    final values = preferences.getStringList(key) ?? [];
 
     return values
         .map(
@@ -85,7 +92,9 @@ class RestrictedCallsRepositoryImpl implements RestrictedCallsRepository {
     final result = calls.map((call) {
       return RejectedCall(
         phoneNumber: call['phoneNumber'] as String,
-        contactName: names[call['phoneNumber'] as String],
+        contactName:
+            call['contactName'] as String? ??
+            names[call['phoneNumber'] as String],
         timestamp: DateTime.fromMillisecondsSinceEpoch(
           call['timestamp'] as int,
         ),
@@ -106,7 +115,74 @@ class RestrictedCallsRepositoryImpl implements RestrictedCallsRepository {
   @override
   Future<void> setBlockUnknownCallers(bool enabled) async {
     await preferences.setBool(_blockUnknownCallersKey, enabled);
-    await callScreeningPlatform.setBlockingPolicy(blockUnknownCallers: enabled);
+    await _syncPolicy();
+  }
+
+  @override
+  Future<bool> getRejectAllCalls() async =>
+      preferences.getBool(_rejectAllCallsKey) ?? false;
+
+  @override
+  Future<void> setRejectAllCalls(bool enabled) async {
+    await preferences.setBool(_rejectAllCallsKey, enabled);
+    if (enabled) {
+      await preferences.setBool(_allowOnlySelectedKey, false);
+    }
+    await _syncPolicy();
+  }
+
+  @override
+  Future<bool> getAllowOnlySelected() async =>
+      preferences.getBool(_allowOnlySelectedKey) ?? false;
+
+  @override
+  Future<void> setAllowOnlySelected(bool enabled) async {
+    await preferences.setBool(_allowOnlySelectedKey, enabled);
+    if (enabled) {
+      await preferences.setBool(_rejectAllCallsKey, false);
+    }
+    await _syncPolicy();
+  }
+
+  @override
+  Future<List<RestrictedContact>> getAllowedContacts() =>
+      _getContacts(_allowedContactsKey);
+
+  @override
+  Future<void> addAllowedContacts(List<RestrictedContact> contacts) async {
+    if (contacts.isEmpty) return;
+    final existing = await getAllowedContacts();
+    final byNumber = <String, RestrictedContact>{
+      for (final contact in existing) contact.phoneNumber: contact,
+      for (final contact in contacts) contact.phoneNumber: contact,
+    };
+    await _saveAllowedContacts(byNumber.values.toList());
+  }
+
+  @override
+  Future<void> removeAllowedContact(String phoneNumber) async {
+    final contacts = await getAllowedContacts();
+    await _saveAllowedContacts(
+      contacts.where((item) => item.phoneNumber != phoneNumber).toList(),
+    );
+  }
+
+  Future<void> _saveAllowedContacts(List<RestrictedContact> contacts) async {
+    await preferences.setStringList(
+      _allowedContactsKey,
+      contacts.map((item) => jsonEncode(item.toJson())).toList(),
+    );
+    await _syncPolicy();
+  }
+
+  Future<void> _syncPolicy() async {
+    final allowed = await getAllowedContacts();
+    await callScreeningPlatform.setBlockingPolicy(
+      blockUnknownCallers: await getBlockUnknownCallers(),
+      rejectAllCalls: await getRejectAllCalls(),
+      allowOnlySelected: await getAllowOnlySelected(),
+      allowedNumbers: allowed.map((item) => item.phoneNumber).toList(),
+    );
   }
 
   @override
@@ -116,8 +192,6 @@ class RestrictedCallsRepositoryImpl implements RestrictedCallsRepository {
     await callScreeningPlatform.setRestrictedNumbers(
       contacts.map((item) => item.phoneNumber).toList(),
     );
-    await callScreeningPlatform.setBlockingPolicy(
-      blockUnknownCallers: await getBlockUnknownCallers(),
-    );
+    await _syncPolicy();
   }
 }

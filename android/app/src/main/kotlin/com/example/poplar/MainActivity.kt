@@ -5,6 +5,8 @@ import android.app.role.RoleManager
 import android.content.pm.PackageManager
 import android.os.Build
 import android.os.Bundle
+import android.net.Uri
+import android.provider.ContactsContract
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
 import io.flutter.embedding.android.FlutterActivity
@@ -22,6 +24,9 @@ class MainActivity : FlutterActivity() {
         private const val RESTRICTED_NUMBERS_KEY = "restricted_numbers"
         private const val REJECTED_CALLS_KEY = "rejected_calls"
         private const val BLOCK_UNKNOWN_KEY = "block_unknown_callers"
+        private const val REJECT_ALL_KEY = "reject_all_calls"
+        private const val ALLOW_ONLY_SELECTED_KEY = "allow_only_selected"
+        private const val ALLOWED_NUMBERS_KEY = "allowed_numbers"
     }
 
     override fun onCreate(
@@ -59,9 +64,15 @@ class MainActivity : FlutterActivity() {
                     result.success(calls)
                 }
                 "setBlockingPolicy" -> {
-                    val enabled = call.argument<Boolean>("blockUnknownCallers") ?: false
+                    val blockUnknown = call.argument<Boolean>("blockUnknownCallers") ?: false
+                    val rejectAll = call.argument<Boolean>("rejectAllCalls") ?: false
+                    val allowOnly = call.argument<Boolean>("allowOnlySelected") ?: false
+                    val allowedNumbers = call.argument<List<String>>("allowedNumbers") ?: emptyList()
                     getSharedPreferences(PREFS_NAME, MODE_PRIVATE).edit()
-                        .putBoolean(BLOCK_UNKNOWN_KEY, enabled)
+                        .putBoolean(BLOCK_UNKNOWN_KEY, blockUnknown)
+                        .putBoolean(REJECT_ALL_KEY, rejectAll)
+                        .putBoolean(ALLOW_ONLY_SELECTED_KEY, allowOnly)
+                        .putStringSet(ALLOWED_NUMBERS_KEY, allowedNumbers.toSet())
                         .apply()
                     result.success(null)
                 }
@@ -95,27 +106,51 @@ class MainActivity : FlutterActivity() {
 
         val calls =
             mutableListOf<Map<String, Any>>()
+        val resolvedNames = mutableMapOf<String, String?>()
 
         for (index in 0 until jsonArray.length()) {
             val call =
                 jsonArray.getJSONObject(index)
 
-            calls.add(
-                mapOf(
-                    "phoneNumber" to call.getString(
-                        "phoneNumber",
-                    ),
-                    "timestamp" to call.getLong(
-                        "timestamp",
-                    ),
-                    "action" to call.getString(
-                        "action",
-                    ),
-                ),
+            val phoneNumber = call.getString("phoneNumber")
+            val item = mutableMapOf<String, Any>(
+                "phoneNumber" to phoneNumber,
+                "timestamp" to call.getLong("timestamp"),
+                "action" to call.getString("action"),
             )
+            val storedName = call.optString("contactName").takeIf { it.isNotBlank() }
+            val resolvedName = storedName ?: resolvedNames.getOrPut(phoneNumber) {
+                findContactName(phoneNumber)
+            }
+            resolvedName?.let {
+                item["contactName"] = it
+            }
+            calls.add(item)
         }
 
         return calls
+    }
+
+    private fun findContactName(number: String): String? {
+        if (ContextCompat.checkSelfPermission(this, Manifest.permission.READ_CONTACTS) !=
+            PackageManager.PERMISSION_GRANTED) return null
+        val uri = Uri.withAppendedPath(
+            ContactsContract.PhoneLookup.CONTENT_FILTER_URI,
+            Uri.encode(number),
+        )
+        return try {
+            contentResolver.query(
+                uri,
+                arrayOf(ContactsContract.PhoneLookup.DISPLAY_NAME),
+                null,
+                null,
+                null,
+            )?.use { cursor ->
+                if (cursor.moveToFirst()) cursor.getString(0) else null
+            }
+        } catch (_: SecurityException) {
+            null
+        }
     }
 
     private fun saveRestrictedNumbers(

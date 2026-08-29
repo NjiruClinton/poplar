@@ -12,6 +12,15 @@ sealed class RestrictedCallsEvent {
   const factory RestrictedCallsEvent.setBlockUnknown(bool enabled) =
       SetBlockUnknownCallers;
   const factory RestrictedCallsEvent.clearLogs() = ClearRejectedCallLogs;
+  const factory RestrictedCallsEvent.setRejectAll(bool enabled) =
+      SetRejectAllCalls;
+  const factory RestrictedCallsEvent.setAllowOnlySelected(bool enabled) =
+      SetAllowOnlySelected;
+  const factory RestrictedCallsEvent.addAllowed(
+    List<RestrictedContact> contacts,
+  ) = AddAllowedContacts;
+  const factory RestrictedCallsEvent.removeAllowed(String phoneNumber) =
+      RemoveAllowedContact;
 }
 
 final class LoadRestrictedCalls extends RestrictedCallsEvent {
@@ -40,4 +49,24 @@ final class SetBlockUnknownCallers extends RestrictedCallsEvent {
 
 final class ClearRejectedCallLogs extends RestrictedCallsEvent {
   const ClearRejectedCallLogs();
+}
+
+final class SetRejectAllCalls extends RestrictedCallsEvent {
+  const SetRejectAllCalls(this.enabled);
+  final bool enabled;
+}
+
+final class SetAllowOnlySelected extends RestrictedCallsEvent {
+  const SetAllowOnlySelected(this.enabled);
+  final bool enabled;
+}
+
+final class AddAllowedContacts extends RestrictedCallsEvent {
+  const AddAllowedContacts(this.contacts);
+  final List<RestrictedContact> contacts;
+}
+
+final class RemoveAllowedContact extends RestrictedCallsEvent {
+  const RemoveAllowedContact(this.phoneNumber);
+  final String phoneNumber;
 }
